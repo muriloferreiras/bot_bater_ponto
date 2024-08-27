@@ -6,55 +6,89 @@ import asyncio
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
-client = commands.Bot(command_prefix='!', intents=intents)
+client = commands.Bot(command_prefix='.', intents=intents)
+
 
 @client.command()
-async def start(ctx: commands.Context):
+async def ponto(ctx: commands.Context):
+    emb = discord.Embed(
+        title='Para iniciar o bate-ponto'
+              ' clique no botão iniciar abaixo, será '
+              'criado um canal com sua hora de inicio e lá'
+              ' você encerrará suas horas.',
+        colour=5763719    
+    )
+    emb.set_thumbnail(url=ctx.guild.icon)
+    emb.set_footer(text=f"Atenciosamente {ctx.guild.name}")
     await ctx.channel.purge(limit=1)
-    current_time = datetime.now()
-    user = ctx.author.mention
-    username = ctx.author.nick
-    start_time_str = current_time.strftime("%H:%M %d/%m")
-    guild = ctx.guild
-    new_channel = await guild.create_text_channel(name=f"Point-{username}-{start_time_str}")
-    await new_channel.set_permissions(ctx.guild.default_role, read_messages=False)
-    await new_channel.set_permissions(ctx.author, read_messages=True)
-    log_channel = guild.get_channel('INSERT_LOG_CHANNEL_ID_HERE')
-    await log_channel.send(f'Start time recorded for {user}: {start_time_str}')
-    await new_channel.send(f'Hello {user}, your hours are being recorded. Click on the `!stop` command to finish.')
+    #deleta a mensagem do comando envia o embed e o botao de inicio
+    await ctx.channel.send(embed=emb)
+    await ctx.channel.send(view=botaoinicio())
 
-@client.command()
-async def stop(ctx: commands.Context):
-    user = ctx.author.mention
-    username = ctx.author.nick
-    start_time = datetime.now()  # Define the interaction duration
-    end_time = datetime.now()
-    start_time_str = start_time.strftime("%H:%M %d/%m")
-    end_time_str = end_time.strftime("%H:%M %d/%m")
-    try:
-        await ctx.send(f'{user}, you ended your shift at {end_time_str}')
-        await ctx.send(f'All set, hours sent to the #recorded-hours channel. This channel will be deleted soon...')
+
+class botaoinicio(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label='Iniciar', custom_id='botao', style=discord.ButtonStyle.success)
+    async def botao(self, ctx: discord.Interaction, button, logs_ponto='logs_ponto'):
+        current_time = datetime.now()
+        username = ctx.user.nick
+        start_time_str = current_time.strftime("%H:%M %d/%m")
         guild = ctx.guild
-        log_channel = guild.get_channel('INSERT_LOG_CHANNEL_ID_HERE')
-        await log_channel.send(f'End time recorded for {user}: {end_time_str}')
-        time_diff = end_time - start_time
-        hours, remainder = divmod(time_diff.total_seconds(), 3600)
-        minutes, _ = divmod(remainder, 60)
-        formatted_time = "{:02}:{:02}".format(int(hours), int(minutes))
-        recorded_channel = guild.get_channel('INSERT_HOURS_RECORDS_CHANNEL_ID_HERE')
-        await recorded_channel.send(embed=discord.Embed(
-            title=f'Hours of {username}',
-            description=f'{user}'
-                        f'\nStart time'
-                        f'```\n {start_time_str}```'
-                        f'\nEnd time'
-                        f'```\n {end_time_str}```'
-                        f'\nTotal hours'
-                        f'```\n{formatted_time}```'
-        ))
-        await asyncio.sleep(8)
-        await ctx.channel.delete()
-    except discord.NotFound:
-        pass
+        new_channel = await guild.create_text_channel(name=f"Point-{username}-{start_time_str}")
+        await new_channel.set_permissions(ctx.guild.default_role, read_messages=False)
+        await new_channel.set_permissions(ctx.user, read_messages=True)  
+        #canal de logs se quiser add  
+        log_channel = guild.get_channel('coloque o id do canal de logs caso queira')
+        if log_channel:
+            await log_channel.send(f'Ponto iniciaod de {ctx.user.mention}: {start_time_str}')
+        #no novo canal a mensagem e o botão para encerrar
+        await new_channel.send(f'Olá {ctx.user.mention}, suas horas estão sendo contadas clique em **Parar** para encerralas.')
+        await new_channel.send(view=botaoparar())
 
-client.run("YOUR_TOKEN_HERE")
+class botaoparar(discord.ui.View):
+    def __init__(self):
+        super().__init__(timeout=None)
+
+    @discord.ui.button(label='Parar', custom_id='parar', style=discord.ButtonStyle.red)
+    async def p(self, interact: discord.Interaction, button2, logs_ponto='logs_ponto',
+                horas_registradas='horas_registradas'): 
+        hora_fim = datetime.now()
+        creation_time = interact.channel.created_at
+        horario_ajustado = creation_time - timedelta(hours=3)
+        #pega a hora de fim quando aperta o botao e o horario que o canal foi criado para calcular (o horario ajustado é para o fuso horario de brasilia)
+        fim = hora_fim.strftime("%H:%M:%S-%d/%m")
+        inicio = horario_ajustado.strftime("%H:%M:%S-%d/%m")
+        try:
+            await interact.channel.send(f'{interact.user.mention}, ponto encerrado em: ``{fim}``')
+            guild = interact.guild
+            #canal de logs se quiser add  
+            log_channel = guild.get_channel('coloque o id do canal de logs caso queira')
+            if log_channel:
+                await log_channel.send(f'End time recorded for {interact.user.mention}: {fim}') 
+            horas_registradas = guild.get_channel('canal para por as horas registradas')       
+            if horas_registradas:
+                horario_ajustado = datetime.strptime(inicio, "%H:%M:%S-%d/%m")
+                hora_fim = datetime.strptime(fim, "%H:%M:%S-%d/%m")
+
+                tempo_total = hora_fim - horario_ajustado
+                hours, remainder = divmod(tempo_total.total_seconds(), 3600)
+                minutes, seconds = divmod(remainder, 60)
+                formatted_time = "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
+                embed=discord.Embed(
+                title=f'Horas de {interact.user.name}',
+                description=f'{interact.user.mention}')
+                embed.add_field(name='',value=f'Hora de inicio ```{inicio}```',inline=False)
+                embed.add_field(name='',value=f'Hora de fim ```{fim}```',inline=False)
+                embed.add_field(name='',value=f'Tempo total ```{formatted_time}```',inline=False)
+                await horas_registradas.send(embed=embed)
+            else:
+                await interact.channel.send('É preciso informar o canal de horas registradas para envia-las')
+            await interact.channel.send(f'Suas horas serão enviadar em {horas_registradas.mention}')   
+            await asyncio.sleep(8)
+            await interact.channel.delete()
+        except discord.NotFound:
+            pass
+
+client.run('seu token')
