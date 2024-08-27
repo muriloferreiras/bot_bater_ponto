@@ -3,10 +3,16 @@ from discord.ext import commands
 from datetime import datetime, timedelta
 import asyncio
 
-intents = discord.Intents.default()
-intents.message_content = True
-intents.members = True
-client = commands.Bot(command_prefix='.', intents=intents)
+
+class bot_on(commands.Bot):
+    def __init__(self):
+        super().__init__(command_prefix='!', intents=discord.Intents.all())
+    #faz com que os botões funcionem mesmo reiniciando o bot
+    async def setup_hook(self):
+        self.add_view(botaoinicio())
+        self.add_view(botaoparar())
+
+client = bot_on()
 
 
 @client.command()
