@@ -6,7 +6,7 @@ import asyncio
 
 class bot_on(commands.Bot):
     def __init__(self):
-        super().__init__(command_prefix='!', intents=discord.Intents.all())
+        super().__init__(command_prefix='>', intents=discord.Intents.all())
     #faz com que os botões funcionem mesmo reiniciando o bot
     async def setup_hook(self):
         self.add_view(botaoinicio())
@@ -98,5 +98,6 @@ class botaoparar(discord.ui.View):
             #avisa que esta ok e deleta o canal
         except discord.NotFound:
             pass
+
 
 client.run('seu token')
