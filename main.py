@@ -42,7 +42,7 @@ class botaoinicio(discord.ui.View):
         start_time_str = hora_inicio.strftime("%H:%M %d/%m")
         guild = ctx.guild
         #cria um novo canal e define as permições
-        new_channel = await guild.create_text_channel(name=f"Point-{ctx.user.nick}-{start_time_str}")
+        new_channel = await guild.create_text_channel(name=f"Ponto-{ctx.user.nick}-{start_time_str}")
         await new_channel.set_permissions(ctx.guild.default_role, read_messages=False)
         await new_channel.set_permissions(ctx.user, read_messages=True)  
         #canal de logs se quiser add  
