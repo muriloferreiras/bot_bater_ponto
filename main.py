@@ -38,11 +38,11 @@ class botaoinicio(discord.ui.View):
 
     @discord.ui.button(label='Iniciar', custom_id='botao', style=discord.ButtonStyle.success)
     async def botao(self, ctx: discord.Interaction, button, logs_ponto='logs_ponto'):
-        current_time = datetime.now()
-        username = ctx.user.nick
-        start_time_str = current_time.strftime("%H:%M %d/%m")
+        hora_inicio = datetime.now()
+        start_time_str = hora_inicio.strftime("%H:%M %d/%m")
         guild = ctx.guild
-        new_channel = await guild.create_text_channel(name=f"Point-{username}-{start_time_str}")
+        #cria um novo canal e define as permições
+        new_channel = await guild.create_text_channel(name=f"Point-{ctx.user.nick}-{start_time_str}")
         await new_channel.set_permissions(ctx.guild.default_role, read_messages=False)
         await new_channel.set_permissions(ctx.user, read_messages=True)  
         #canal de logs se quiser add  
@@ -61,8 +61,8 @@ class botaoparar(discord.ui.View):
     async def p(self, interact: discord.Interaction, button2, logs_ponto='logs_ponto',
                 horas_registradas='horas_registradas'): 
         hora_fim = datetime.now()
-        creation_time = interact.channel.created_at
-        horario_ajustado = creation_time - timedelta(hours=3)
+        hr_canal_criado = interact.channel.created_at
+        horario_ajustado = hr_canal_criado - timedelta(hours=3)
         #pega a hora de fim quando aperta o botao e o horario que o canal foi criado para calcular (o horario ajustado é para o fuso horario de brasilia)
         fim = hora_fim.strftime("%H:%M:%S-%d/%m")
         inicio = horario_ajustado.strftime("%H:%M:%S-%d/%m")
@@ -77,8 +77,8 @@ class botaoparar(discord.ui.View):
             if horas_registradas:
                 horario_ajustado = datetime.strptime(inicio, "%H:%M:%S-%d/%m")
                 hora_fim = datetime.strptime(fim, "%H:%M:%S-%d/%m")
-
                 tempo_total = hora_fim - horario_ajustado
+                #faz o calculo do tepo total e tranforma o horário no formato legivel
                 hours, remainder = divmod(tempo_total.total_seconds(), 3600)
                 minutes, seconds = divmod(remainder, 60)
                 formatted_time = "{:02}:{:02}:{:02}".format(int(hours), int(minutes), int(seconds))
@@ -89,11 +89,13 @@ class botaoparar(discord.ui.View):
                 embed.add_field(name='',value=f'Hora de fim ```{fim}```',inline=False)
                 embed.add_field(name='',value=f'Tempo total ```{formatted_time}```',inline=False)
                 await horas_registradas.send(embed=embed)
+                #envia um embed no canal de horar registradas com todos os horario e a soma
             else:
                 await interact.channel.send('É preciso informar o canal de horas registradas para envia-las')
             await interact.channel.send(f'Suas horas serão enviadar em {horas_registradas.mention}')   
             await asyncio.sleep(8)
             await interact.channel.delete()
+            #avisa que esta ok e deleta o canal
         except discord.NotFound:
             pass
 
